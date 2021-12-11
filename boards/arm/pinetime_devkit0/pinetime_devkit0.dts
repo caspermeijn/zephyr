@@ -66,6 +66,11 @@
 			label = "Key out";
 		};
 	};
+
+    lcd_backlight: backlight {
+        compatible = "led-backlight";
+        leds = <&blled2>;
+    };
 };
 
 &gpiote {
@@ -160,6 +165,7 @@
 		nvgam-param = [D0 04 0C 11 13 2C 3F 44 51 2F 1F 1F 20 23];
 		ram-param = [00 F0];
 		rgb-param = [CD 08 14];
+        backlight = <&lcd_backlight>;
 	};
 };
 
