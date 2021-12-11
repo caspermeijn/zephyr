@@ -1,0 +1,17 @@
+# Copyright (c) 2021 Casper Meijn <casper@meijn.net>
+# SPDX-License-Identifier: Apache-2.0
+
+description: led-backlight bindings
+
+compatible: led-backlight
+
+include:
+  - name: base.yaml
+    property-allowlist: [label]
+
+properties:
+  leds:
+    required: true
+#    TODO: this should be phandle-array according to Linux kernel
+    type: phandle
+    description: A list of LED nodes
