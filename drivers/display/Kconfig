@@ -12,7 +12,7 @@ if DISPLAY
 
 config DISPLAY_INIT_PRIORITY
 	int "Display devices init priority"
-	default 85
+	default 95
 	help
 	  Display devices initialization priority.
 
