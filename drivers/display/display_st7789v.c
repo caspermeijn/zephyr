@@ -15,6 +15,7 @@
 #include <device.h>
 #include <drivers/spi.h>
 #include <drivers/gpio.h>
+#include <drivers/led.h>
 #include <pm/device.h>
 #include <sys/byteorder.h>
 #include <drivers/display.h>
@@ -37,6 +38,17 @@ static uint8_t st7789v_nvgam_param[] = DT_INST_PROP(0, nvgam_param);
 static uint8_t st7789v_ram_param[] = DT_INST_PROP(0, ram_param);
 static uint8_t st7789v_rgb_param[] = DT_INST_PROP(0, rgb_param);
 
+#define ST7789V_BACKLIGHT_NODE  DT_INST_PHANDLE(0, backlight)
+#if DT_NODE_HAS_COMPAT(ST7789V_BACKLIGHT_NODE, led_backlight)
+    #define ST7789V_BACKLIGHT_LED_NODE  DT_PHANDLE(ST7789V_BACKLIGHT_NODE, leds)
+    #if DT_NODE_HAS_COMPAT(DT_PARENT(ST7789V_BACKLIGHT_LED_NODE), gpio_leds)
+        #define ST7789V_BACKLIGHT_LED_NODE_ID DT_PARENT(ST7789V_BACKLIGHT_LED_NODE)
+        #define ST7789V_BACKLIGHT_LED_DEV_NAME		DEVICE_DT_NAME(ST7789V_BACKLIGHT_LED_NODE_ID)
+        // TODO: The LED_NUMBER needs to come from the device tree
+        #define ST7789V_BACKLIGHT_LED_NUMBER 2
+    #endif
+#endif
+
 struct st7789v_data {
 	const struct device *spi_dev;
 	struct spi_config spi_config;
@@ -46,6 +58,9 @@ struct st7789v_data {
 
 #if DT_INST_NODE_HAS_PROP(0, reset_gpios)
 	const struct device *reset_gpio;
+#endif
+#ifdef ST7789V_BACKLIGHT_LED_DEV_NAME
+	const struct device *backlight_led;
 #endif
 	const struct device *cmd_data_gpio;
 
@@ -214,7 +229,12 @@ static void *st7789v_get_framebuffer(const struct device *dev)
 static int st7789v_set_brightness(const struct device *dev,
 			   const uint8_t brightness)
 {
-	return -ENOTSUP;
+#ifdef ST7789V_BACKLIGHT_LED_DEV_NAME
+    struct st7789v_data *data = (struct st7789v_data *)dev->data;
+    return led_set_brightness(data->backlight_led, ST7789V_BACKLIGHT_LED_NUMBER, brightness);
+#else
+    return -ENOTSUP;
+#endif
 }
 
 static int st7789v_set_contrast(const struct device *dev,
@@ -375,6 +395,19 @@ static int st7789v_init(const struct device *dev)
 	if (gpio_pin_configure(data->reset_gpio, ST7789V_RESET_PIN,
 			       GPIO_OUTPUT_INACTIVE | ST7789V_RESET_FLAGS)) {
 		LOG_ERR("Couldn't configure reset pin");
+		return -EIO;
+	}
+#endif
+
+#ifdef ST7789V_BACKLIGHT_LED_DEV_NAME
+	data->backlight_led = device_get_binding(ST7789V_BACKLIGHT_LED_DEV_NAME);
+	if (data->backlight_led == NULL) {
+		LOG_ERR("Could not get led device for display backlight");
+		return -EPERM;
+	}
+
+	if (led_on(data->backlight_led, ST7789V_BACKLIGHT_LED_NUMBER)) {
+		LOG_ERR("Couldn't power on display backlight led");
 		return -EIO;
 	}
 #endif

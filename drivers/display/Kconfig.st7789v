@@ -5,7 +5,7 @@
 
 menuconfig ST7789V
 	bool "ST7789V display driver"
-	depends on SPI
+	depends on SPI && LED && LED_GPIO
 	help
 	  Enable driver for ST7789V display driver.
 
